@@ -19,7 +19,7 @@ local ENTRIES = {
     tooltip = "Untick to drag the map by its top bar.",
     get = function() return ns.DB.locked end, set = function(v) ns.DB.locked = v end },
   { kind = "checkbox", id = "BUBBLEMAP_ATTACH_TRACKER", label = "BubbleQuest's tracker under the map",
-    default = true,
+    default = true, needsQuest = true,
     tooltip = "With BubbleQuest: its tracker hangs under the map as one column, the map as wide as the "
       .. "tracker. Untick to place them apart.",
     get = function() return ns.DB.attachTracker end,
@@ -115,7 +115,9 @@ local function register()
   local category = Settings.RegisterVerticalLayoutCategory("BubbleMap")
   local layout = SettingsPanel:GetLayout(category)
   for _, entry in ipairs(ENTRIES) do
-    if entry.kind == "section" then
+    if entry.needsQuest and not ns.Quest then
+      -- Only with BubbleQuest loaded (it would do nothing without).
+    elseif entry.kind == "section" then
       layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(entry.label))
     else
       local get, set = entry.get, entry.set
