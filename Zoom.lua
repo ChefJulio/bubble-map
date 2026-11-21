@@ -58,7 +58,7 @@ local showSlider  -- set when the slider is created (below)
 
 -- Our terrain is under the player: outdoors, on a continent we have tiles for.
 local function terrainHere()
-  if IsIndoors() then
+  if ns.Enclosed() then  -- indoors, or Ironforge / Undercity (Init.lua)
     return false
   end
   local _, _, _, mapID = UnitPosition("player")

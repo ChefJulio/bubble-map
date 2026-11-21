@@ -222,7 +222,7 @@ local function update(_, elapsed)
   local px, py, mapID = Terrain:Centre()  -- the view's centre (the player, or panned)
   local tiles = mapID and ns.Tiles.maps[mapID]
   local s = scale()
-  if not (px and py and tiles and s and turn) or IsIndoors() then
+  if not (px and py and tiles and s and turn) or ns.Enclosed() then
     blizzardGround(true)
     if lastMap then
       hideTiles()
