@@ -213,6 +213,12 @@ buttons are put away.
   only (overlays): their painted base art has faded borders that overlapped (review: "this looks bad").
   Revealed by default (setting revealMap): every overlay from Data/Overlays.lua (tools/overlays.py, the
   game's WorldMapOverlay data), as Leatrix Maps reveals; unticked, only the explored ones.
+- **Settings drawer** (2026-11-21): the footer's "Settings" opens BubbleMap's settings in the same drawer
+  as the quest log (one drawer, two panels; the button of the open one closes it): the Options page's
+  entries (Settings.lua ENTRIES, one list), as widgets, applied live, values read again on every open.
+- **Lines to party members** (setting groupLines, on): dashes from you to each member in their class
+  colour, faint, unlike the quest guide's round dots; on the minimap (any mode) and in the window,
+  clipped to the view, so a member beyond it gets a line to the edge.
 - **Quest log drawer:** BubbleQuest's quest list (`BubbleQuestAPI.CreateQuestLogPanel(parent, options)`
   -> { GetFrame, Show, Hide, Refresh }, `options.onQuestClick(questID, target)` with target
   { map, north, west } or nil; agreed 2026-11-18, built in BubbleQuest) in a drawer on the window's

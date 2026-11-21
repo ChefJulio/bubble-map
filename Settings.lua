@@ -66,6 +66,10 @@ local ENTRIES = {
     tooltip = "Each party or raid member's name beside their dot, in their class colour, on the map and "
       .. "in the map window. Untick for dots only (hover one for its name).",
     get = function() return ns.DB.groupNames end, set = function(v) ns.DB.groupNames = v end },
+  { kind = "checkbox", id = "BUBBLEMAP_GROUP_LINES", label = "Lines to party members", default = true,
+    tooltip = "A dashed line from you to each party or raid member, in their class colour, on the map and "
+      .. "in the map window (to the map's edge when they're beyond it).",
+    get = function() return ns.DB.groupLines end, set = function(v) ns.DB.groupLines = v end },
 
   { kind = "checkbox", id = "BUBBLEMAP_WORLD_TERRAIN", label = "Terrain on the world map", default = false,
     tooltip = "Zone maps on the world map show the real terrain (the minimap's own ground) instead of the "
@@ -111,6 +115,17 @@ local SHOW_KEYS = {
 
 local VAR_TYPE = { checkbox = "Boolean", slider = "Number", dropdown = "String" }
 
+local Settings_ = {}
+ns.Settings = Settings_
+
+-- An entry's getter and setter (the "show" ones through ns.DB.show and Around:Apply).
+local function accessors(entry)
+  if SHOW_KEYS[entry.id] then
+    return show(SHOW_KEYS[entry.id])
+  end
+  return entry.get, entry.set
+end
+
 local function register()
   local category = Settings.RegisterVerticalLayoutCategory("BubbleMap")
   local layout = SettingsPanel:GetLayout(category)
@@ -120,10 +135,7 @@ local function register()
     elseif entry.kind == "section" then
       layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(entry.label))
     else
-      local get, set = entry.get, entry.set
-      if SHOW_KEYS[entry.id] then
-        get, set = show(SHOW_KEYS[entry.id])
-      end
+      local get, set = accessors(entry)
       local setting = Settings.RegisterProxySetting(category, entry.id, Settings.VarType[VAR_TYPE[entry.kind]],
         entry.label, entry.default, get, set)
       if entry.kind == "checkbox" then
@@ -151,3 +163,116 @@ ns.On("ADDON_LOADED", function(name)
     register()  -- after Init.lua's handler (registered first): ns.DB is set
   end
 end)
+
+-- The settings drawer (MapWindow.lua's footer: Settings): the same entries as the Options page, as
+-- widgets in a scrolling list, applied as they change. Built once; every open reads the values again
+-- (the Options page or a bar button may have changed them).
+
+local ROW, PAD = 26, 10
+local widgets = {}  -- { refresh = function() } per entry
+local built = {}    -- [frame] = true once filled
+
+local function tooltipOn(frame, entry)
+  if not entry.tooltip then
+    return
+  end
+  frame:HookScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(entry.label, 1, 1, 1)
+    GameTooltip:AddLine(entry.tooltip, 0.8, 0.8, 0.8, true)
+    GameTooltip:Show()
+  end)
+  frame:HookScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
+local function build(frame)
+  local scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", 0, -6)
+  scroll:SetPoint("BOTTOMRIGHT", -24, 6)
+  local list = CreateFrame("Frame", nil, scroll)
+  list:SetSize(1, 1)
+  scroll:SetScrollChild(list)
+  scroll:SetScript("OnSizeChanged", function(_, w) list:SetWidth(w) end)
+
+  local y = 0
+  local function row(height)
+    local r = CreateFrame("Frame", nil, list)
+    r:SetPoint("TOPLEFT", PAD, -y)
+    r:SetPoint("RIGHT", list, "RIGHT", -PAD, 0)
+    r:SetHeight(height or ROW)
+    y = y + (height or ROW)
+    return r
+  end
+  for _, entry in ipairs(ENTRIES) do
+    if entry.needsQuest and not ns.Quest then
+      -- Only with BubbleQuest loaded.
+    elseif entry.kind == "section" then
+      y = y + 6
+      local r = row(24)
+      local text = r:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+      text:SetPoint("LEFT")
+      text:SetText(entry.label)
+    else
+      local get, set = accessors(entry)
+      local r = row(entry.kind == "checkbox" and ROW or 44)
+      if entry.kind == "checkbox" then
+        local box = CreateFrame("CheckButton", nil, r, "UICheckButtonTemplate")
+        box:SetSize(24, 24)
+        box:SetPoint("LEFT")
+        box.Text:SetFontObject("GameFontHighlight")
+        box.Text:SetText(entry.label)
+        box:SetScript("OnClick", function(self) set(self:GetChecked() and true or false) end)
+        tooltipOn(box, entry)
+        widgets[#widgets + 1] = { refresh = function() box:SetChecked(get() and true or false) end }
+      else
+        local label = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        label:SetPoint("TOPLEFT", 4, -2)
+        label:SetText(entry.label)
+        if entry.kind == "slider" then
+          local slider = CreateFrame("Frame", nil, r, "MinimalSliderWithSteppersTemplate")
+          slider:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+          slider:SetPoint("RIGHT", r, "RIGHT", -40, 0)
+          slider:SetHeight(20)
+          local steps = math.floor((entry.max - entry.min) / entry.step + 0.5)
+          local ready = false
+          slider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, value)
+            if ready then
+              set(value)
+            end
+          end, slider)
+          tooltipOn(slider, entry)
+          widgets[#widgets + 1] = { refresh = function()
+            ready = false
+            slider:Init(get(), entry.min, entry.max, steps,
+              { [MinimalSliderWithSteppersMixin.Label.Right] = entry.format })
+            ready = true
+          end }
+        else
+          local dropdown = CreateFrame("DropdownButton", nil, r, "WowStyle1DropdownTemplate")
+          dropdown:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
+          dropdown:SetPoint("RIGHT", r, "RIGHT", -8, 0)
+          dropdown:SetupMenu(function(_, root)
+            for _, option in ipairs(entry.options()) do
+              root:CreateRadio(option[2], function() return get() == option[1] end, function() set(option[1]) end)
+            end
+          end)
+          tooltipOn(dropdown, entry)
+          widgets[#widgets + 1] = { refresh = function() dropdown:GenerateMenu() end }
+        end
+      end
+    end
+  end
+  list:SetHeight(y + PAD)
+end
+
+---Fill `frame` with the settings (built the first time) and show the current values.
+---@param frame Frame
+function Settings_:FillPanel(frame)
+  if not built[frame] then
+    built[frame] = true
+    build(frame)
+  end
+  for _, w in ipairs(widgets) do
+    w.refresh()
+  end
+end

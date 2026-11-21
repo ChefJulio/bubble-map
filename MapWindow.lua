@@ -576,7 +576,9 @@ end
 local DRAWER_MIN, DRAWER_MAX, DRAWER_DEFAULT = 240, 600, 300  -- BubbleQuest's list needs 240 (its word)
 local PULSE_SECONDS = 2.5
 
-local questPanel, questButton
+local questPanel, questButton, settingsButton
+local drawerFrames = {}  -- [mode] = the frame its panel fills: "quests" (BubbleQuest's list), "settings"
+local drawerMode         -- what the open drawer shows
 local pulse  -- { map, north, west, at } while a clicked quest's spot pulses
 
 local function questLogAvailable()
@@ -636,7 +638,7 @@ end
 
 local function createDrawer(footer, bar)
   -- The list's own minimum, when it says (BubbleQuestAPI.QUEST_LOG_MIN_WIDTH).
-  local listMin = tonumber(ns.Quest.QUEST_LOG_MIN_WIDTH)
+  local listMin = ns.Quest and tonumber(ns.Quest.QUEST_LOG_MIN_WIDTH)
   if listMin then
     DRAWER_MIN = math.max(listMin, 120)
   end
@@ -648,9 +650,13 @@ local function createDrawer(footer, bar)
   local back = drawer:CreateTexture(nil, "BACKGROUND")
   back:SetAllPoints()
   back:SetColorTexture(0.05, 0.05, 0.06, 0.96)
-  local panelFrame = CreateFrame("Frame", nil, drawer)
-  panelFrame:SetPoint("TOPLEFT")
-  panelFrame:SetPoint("BOTTOMRIGHT", -6, 0)
+  for _, mode in ipairs({ "quests", "settings" }) do
+    local panelFrame = CreateFrame("Frame", nil, drawer)
+    panelFrame:SetPoint("TOPLEFT")
+    panelFrame:SetPoint("BOTTOMRIGHT", -6, 0)
+    panelFrame:Hide()
+    drawerFrames[mode] = panelFrame
+  end
 
   -- Its outer (right) edge drags its width, the window with it: the map keeps its size.
   local edge = CreateFrame("Frame", nil, drawer)
@@ -683,16 +689,6 @@ local function createDrawer(footer, bar)
   drawer:SetScript("OnShow", function()
     growWindow(drawer:GetWidth())
     window:SetResizeBounds(320 + drawer:GetWidth(), 240)
-    if not questPanel then
-      questPanel = ns.Quest.CreateQuestLogPanel(panelFrame, {
-        onQuestClick = function(_, target)
-          if target and target.map and target.north and target.west then
-            centreOn(target)
-          end
-        end,
-      })
-    end
-    questPanel:Show()
     layoutContent(footer, bar)
   end)
   drawer:SetScript("OnHide", function()
@@ -701,8 +697,42 @@ local function createDrawer(footer, bar)
     if questPanel then
       questPanel:Hide()
     end
+    drawerMode = nil
     layoutContent(footer, bar)
   end)
+end
+
+-- Open the drawer on `mode` ("quests", "settings"), or close it when it already shows that. The panels
+-- are made the first time they're wanted.
+local function openDrawer(mode)
+  if drawer:IsShown() and drawerMode == mode then
+    drawer:Hide()
+    ns.DB.drawerOpen = false
+    return
+  end
+  for m, frame in pairs(drawerFrames) do
+    frame:SetShown(m == mode)
+  end
+  if mode == "quests" then
+    if not questPanel then
+      questPanel = ns.Quest.CreateQuestLogPanel(drawerFrames.quests, {
+        onQuestClick = function(_, target)
+          if target and target.map and target.north and target.west then
+            centreOn(target)
+          end
+        end,
+      })
+    end
+    questPanel:Show()
+  else
+    if questPanel then
+      questPanel:Hide()
+    end
+    ns.Settings:FillPanel(drawerFrames.settings)
+  end
+  drawerMode = mode
+  ns.DB.drawerOpen = mode
+  drawer:Show()
 end
 
 -- The pulse on a clicked quest's spot: a highlight ring growing and fading.
@@ -833,18 +863,20 @@ local function create()
     GameTooltip:Show()
   end)
   styleButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
-  -- The quest log drawer's button (BubbleQuest's panel; none without it).
+  -- The drawer's buttons: Settings (BubbleMap's own, live), Quests (BubbleQuest's list; none without it).
+  createDrawer(footer, bar)
+  local function footerButton(text, anchor, mode)
+    local b = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
+    b:SetHeight(16)
+    b:SetText(text)
+    b:SetWidth(b:GetFontString():GetStringWidth() + 20)
+    b:SetPoint("RIGHT", anchor, "LEFT", -4, 0)
+    b:SetScript("OnClick", function() openDrawer(mode) end)
+    return b
+  end
+  settingsButton = footerButton("Settings", styleButton, "settings")
   if questLogAvailable() then
-    createDrawer(footer, bar)
-    questButton = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
-    questButton:SetHeight(16)
-    questButton:SetText("Quests")
-    questButton:SetWidth(questButton:GetFontString():GetStringWidth() + 20)
-    questButton:SetPoint("RIGHT", styleButton, "LEFT", -4, 0)
-    questButton:SetScript("OnClick", function()
-      drawer:SetShown(not drawer:IsShown())
-      ns.DB.drawerOpen = drawer:IsShown()
-    end)
+    questButton = footerButton("Quests", settingsButton, "quests")
   end
   updateStyleButton()
 
@@ -935,8 +967,13 @@ local function create()
   window:SetScript("OnShow", function()
     MapWindow.following = true
     ns.MapPoints.Refresh()  -- flight points learned, events begun since it was last open
-    if drawer and ns.DB.drawerOpen and not drawer:IsShown() then
-      drawer:Show()  -- open as it was left
+    -- Open as it was left (true: the quest list, from before the settings drawer).
+    local mode = ns.DB.drawerOpen == true and "quests" or ns.DB.drawerOpen
+    if mode == "quests" and not questLogAvailable() then
+      mode = nil
+    end
+    if drawer and mode and not drawer:IsShown() then
+      openDrawer(mode)
     end
     redraw()
   end)

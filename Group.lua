@@ -17,9 +17,16 @@ local RING = { 0, 0, 0, 0.9 }      -- a dark ring, so the dot reads on any groun
 local DISC = "Interface\\CharacterFrame\\TempPortraitAlphaMask"  -- a white disc (its alpha is the circle)
 local HOVER_RADIUS = 7             -- pixels
 local UPDATE_SECONDS = 0.05
+-- Lines to members (setting groupLines): dashes, not the quest guide's round dots, in the member's class
+-- colour, faint, so they read as a different thing.
+local DASH_LENGTH, DASH_WIDTH, DASH_GAP = 7, 2, 5
+local DASH_ALPHA = 0.55
+local MAX_DASHES = 120  -- per member, at most
 -- A valid anchor on this client (Blizzard's own list of them: Blizzard_AuraButton.lua:49), missing from
 -- the API annotations lint reads, which list only ANCHOR_CURSOR_RIGHT; typed loosely for that alone.
 local ANCHOR_LEFT_OF_CURSOR = "ANCHOR_CURSOR_LEFT" ---@type any
+
+local GREY = { r = 0.8, g = 0.8, b = 0.8 }
 
 local Group = {}
 ns.Group = Group
@@ -60,7 +67,7 @@ function Group.NewLayer(frame)
   local layer = CreateFrame("Frame", nil, frame)
   layer:SetAllPoints()
   layer:EnableMouse(false)
-  return setmetatable({ frame = layer, dots = {}, shown = {}, hovering = false }, Layer)
+  return setmetatable({ frame = layer, dots = {}, dashes = {}, shown = {}, hovering = false }, Layer)
 end
 
 function Layer:Dot(i)
@@ -86,11 +93,64 @@ function Layer:Dot(i)
   return d
 end
 
+-- A dash texture, made once.
+function Layer:Dash(i)
+  local d = self.dashes[i]
+  if not d then
+    d = self.frame:CreateTexture(nil, "ARTWORK", nil, 0)
+    d:SetTexture("Interface\\BUTTONS\\WHITE8X8")
+    d:SetSize(DASH_LENGTH, DASH_WIDTH)
+    self.dashes[i] = d
+  end
+  return d
+end
+
+-- Dashes from (x0, y0) to (x1, y1), from index `used` + 1, only inside the frame; returns the count used.
+function Layer:Line(x0, y0, x1, y1, color, used)
+  local dx, dy = x1 - x0, y1 - y0
+  local length = math.sqrt(dx * dx + dy * dy)
+  local step = DASH_LENGTH + DASH_GAP
+  if length < step * 2 then
+    return used
+  end
+  local ux, uy = dx / length, dy / length
+  local angle = math.atan2(dy, dx)
+  local halfW, halfH = self.frame:GetWidth() / 2, self.frame:GetHeight() / 2
+  -- Start clear of your arrow and stop clear of their dot.
+  local count = 0
+  for s = step, length - step, step do
+    local x, y = x0 + ux * s, y0 + uy * s
+    if math.abs(x) <= halfW and math.abs(y) <= halfH then
+      used = used + 1
+      local d = self:Dash(used)
+      d:SetVertexColor(color.r, color.g, color.b, DASH_ALPHA)
+      d:SetRotation(angle)
+      d:ClearAllPoints()
+      d:SetPoint("CENTER", self.frame, "CENTER", x, y)
+      d:Show()
+    end
+    count = count + 1
+    if count >= MAX_DASHES then
+      break
+    end
+  end
+  return used
+end
+
 function Layer:HideFrom(from)
   for i = from, #self.dots do
     self.dots[i].ring:Hide()
     self.dots[i].fill:Hide()
     self.dots[i].name:Hide()
+  end
+  if from == 1 then
+    self:HideDashes(1)
+  end
+end
+
+function Layer:HideDashes(from)
+  for i = from, #self.dashes do
+    self.dashes[i]:Hide()
   end
 end
 
@@ -112,10 +172,22 @@ function Layer:Draw(map, project, noHover, namesOnly)
   local frame = self.frame
   local halfW, halfH = frame:GetWidth() / 2, frame:GetHeight() / 2
   local count = 0
+  -- Lines start at you: where you are on this map (nil when you're elsewhere).
+  local px, py
+  if ns.DB.groupLines then
+    local pn, pw, _, pmap = UnitPosition("player")
+    if readable(pn) and readable(pw) and pmap == map then
+      px, py = project(pn, pw)
+    end
+  end
+  local dashes = 0
   for _, unit in ipairs(units()) do
     local un, uw, _, umap = UnitPosition(unit)
     if readable(un) and readable(uw) and umap == map then
       local x, y = project(un, uw)
+      if px then
+        dashes = self:Line(px, py, x, y, classColor(unit) or GREY, dashes)
+      end
       if math.abs(x) <= halfW and math.abs(y) <= halfH then
         count = count + 1
         local d = self:Dot(count)
@@ -145,6 +217,7 @@ function Layer:Draw(map, project, noHover, namesOnly)
     end
   end
   self:HideFrom(count + 1)
+  self:HideDashes(dashes + 1)
   self:Hover(noHover)
 end
 
