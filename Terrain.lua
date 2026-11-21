@@ -37,6 +37,10 @@ local FILL = ns.SEA
 
 local Terrain = {
   active = false,
+  -- The view's centre, away from the player by this much (world yards): dragged in our own map, easing
+  -- back to the player while they move and the mouse isn't over the map (review). 0, 0: on the player.
+  offsetNorth = 0,
+  offsetWest = 0,
   zoom = 1,     -- the view reaches this many times further than Blizzard's minimap (Zoom.lua's overview)
   force = false,  -- drawn whatever the shape and zoom: BubbleMap's own map is showing (Zoom.lua)
   loaded = 0,   -- SetTexture calls (for /bmap)
@@ -149,7 +153,55 @@ local function angle()
   return GetPlayerFacing()
 end
 
-local function update()
+-- The pan: a drag on the map in our own map (the game's minimap can't be panned), and the ease back.
+local PAN_EASE_SECONDS = 0.6   -- the offset shrinks by e each this long while you move
+local CLICK_SLOP = 4           -- pixels a press may move and still be a click
+local pan  -- { x, y (cursor at the press), north, west (offset then), moved } while the button is down
+
+local function panUpdate(elapsed)
+  local outer = ns.Minimap.outer
+  if not ns.Zoom.own then
+    pan = nil
+    Terrain.offsetNorth, Terrain.offsetWest = 0, 0
+    return
+  end
+  if pan then
+    local s, turn = Terrain:Projection()
+    local cx, cy = GetCursorPosition()
+    local k = outer:GetEffectiveScale()
+    local dx, dy = (cx - pan.x) / k, (cy - pan.y) / k
+    if s and (pan.moved or math.abs(dx) > CLICK_SLOP or math.abs(dy) > CLICK_SLOP) then
+      pan.moved = true
+      -- The screen's turn undone: east and north on the ground; the view moves against the drag.
+      local cos, sin = math.cos(turn or 0), math.sin(turn or 0)
+      local east, north = dx * cos - dy * sin, dx * sin + dy * cos
+      Terrain.offsetWest = pan.west + east / s
+      Terrain.offsetNorth = pan.north - north / s
+    end
+  elseif (Terrain.offsetNorth ~= 0 or Terrain.offsetWest ~= 0) and IsPlayerMoving() and not outer:IsMouseOver() then
+    local keep = math.exp(-(elapsed or 0) / PAN_EASE_SECONDS)
+    Terrain.offsetNorth, Terrain.offsetWest = Terrain.offsetNorth * keep, Terrain.offsetWest * keep
+    if Terrain.offsetNorth ^ 2 + Terrain.offsetWest ^ 2 < 1 then
+      Terrain.offsetNorth, Terrain.offsetWest = 0, 0
+    end
+  end
+end
+
+---The view's centre: world north, west and the instance map (the player's position plus the pan);
+---nil when the player's position can't be read.
+---@return number?
+---@return number?
+---@return number?
+function Terrain:Centre()
+  local north, west, _, map = UnitPosition("player")
+  if north == nil or west == nil or issecretvalue(north) or issecretvalue(west) then
+    return nil
+  end
+  return north + self.offsetNorth, west + self.offsetWest, map
+end
+
+local function update(_, elapsed)
+  panUpdate(elapsed)
   local outer = ns.Minimap.outer
   local turn = angle()
   -- Square and north-up, Blizzard's minimap covers the whole frame. Rotating, its square ground image
@@ -167,7 +219,7 @@ local function update()
     blizzardGround(true)
     return
   end
-  local px, py, _, mapID = UnitPosition("player")
+  local px, py, mapID = Terrain:Centre()  -- the view's centre (the player, or panned)
   local tiles = mapID and ns.Tiles.maps[mapID]
   local s = scale()
   if not (px and py and tiles and s and turn) or IsIndoors() then
@@ -304,6 +356,35 @@ table.insert(ns.Minimap.onActivate, function(outer)
   holder:SetAllPoints()
   art = ns.Art.New(holder)
   clip:SetScript("OnUpdate", update)
+
+  -- The pan: the map frame takes the mouse (the wheel it had already: Zoom.lua). A press that doesn't
+  -- move is a click: BubbleQuest's quest marks get it first (BubbleQuestAPI.MinimapClick, when it has it).
+  outer:EnableMouse(true)
+  outer:SetScript("OnMouseDown", function(_, button)
+    if button == "LeftButton" then
+      local x, y = GetCursorPosition()
+      pan = { x = x, y = y, north = Terrain.offsetNorth, west = Terrain.offsetWest, moved = false }
+    end
+  end)
+  outer:SetScript("OnMouseUp", function(_, button)
+    local wasDrag = pan and pan.moved
+    pan = nil
+    local quest = ns.Quest
+    if not wasDrag and quest and type(quest.MinimapClick) == "function" then
+      quest.MinimapClick(button)
+    end
+  end)
+  -- BubbleQuest's quest layer around the same centre (BubbleQuestAPI.SetMinimapCentre, when it has it).
+  local quest = ns.Quest
+  if quest and type(quest.SetMinimapCentre) == "function" then
+    quest.SetMinimapCentre(function()
+      if Terrain.offsetNorth == 0 and Terrain.offsetWest == 0 then
+        return nil  -- the player
+      end
+      local north, west = Terrain:Centre()
+      return north, west
+    end)
+  end
 
   -- The data is for one client build. A new build of the same version (a hotfix patch) has kept every
   -- tile so far (1.60.1.70959 to 71037: identical tables), so only a new version warns.

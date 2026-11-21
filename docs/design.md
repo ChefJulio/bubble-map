@@ -220,6 +220,11 @@ buttons are put away.
   gameWaypoint); the world map key can open our window (override bindings on our frame, out of combat;
   setting mapOnMapKey, off by default); the window fades while you move (windowMoveAlpha) and has the
   world map's maximize button. Not done: multi-floor maps and interiors.
+- **Minimap pan** (2026-11-21): drag our own map to look around (the game's minimap can't pan: not in gather
+  mode); the view's centre (Terrain:Centre: you plus Terrain.offsetNorth/West) eases back to you while
+  you move and the mouse is off the map (e per 0.6 s). Terrain, art, dots, waypoints, points and the arrow
+  draw around it; BubbleQuest's quest layer once it has SetMinimapCentre (asked). A press that doesn't
+  move is a click, offered to BubbleQuest first (MinimapClick, asked: quest previews).
 - **Minimap opacity** (minimapAlpha): our frame and Blizzard's minimap fade, fully opaque on hover;
   BubbleQuest's quest layer follows our frame's alpha (its side, 2026-11-21).
 - **Settings drawer** (2026-11-21): the footer's "Settings" opens BubbleMap's settings in the same drawer

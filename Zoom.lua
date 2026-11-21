@@ -219,6 +219,19 @@ local function update()
   -- apiguard: allow the argument is a constant string, never a secret value
   local rotating = GetCVarBool("rotateMinimap") and not C_Minimap.IsRotateMinimapIgnored()
   arrowTexture:SetRotation(rotating and 0 or (GetPlayerFacing() or 0))
+  -- Panned (Terrain.lua): the arrow where you are, hidden past the map's edge.
+  local x, y = 0, 0
+  local s, turn = ns.Terrain:Projection()
+  if s and (ns.Terrain.offsetNorth ~= 0 or ns.Terrain.offsetWest ~= 0) then
+    -- You sit at the centre minus the pan: right by its west yards, up by minus its north; turned.
+    local x0, y0 = ns.Terrain.offsetWest * s, -ns.Terrain.offsetNorth * s
+    local cos, sin = math.cos(turn), math.sin(turn)
+    x, y = x0 * cos + y0 * sin, -x0 * sin + y0 * cos
+  end
+  local outer = ns.Minimap.outer
+  arrow:ClearAllPoints()
+  arrow:SetPoint("CENTER", outer, "CENTER", x, y)
+  arrow:SetShown(math.abs(x) <= outer:GetWidth() / 2 and math.abs(y) <= outer:GetHeight() / 2)
 end
 
 ---One line for /bmap.

@@ -395,7 +395,7 @@ table.insert(ns.Minimap.onActivate, function(outer)
     if layer:GetFrameLevel() ~= level then
       layer:SetFrameLevel(level)
     end
-    local pn, pw, _, pmap = UnitPosition("player")
+    local pn, pw, pmap = ns.Terrain:Centre()  -- the view's centre (panned or on you)
     local s, turn = ns.Terrain:Projection()
     if not (readable(pn) and readable(pw) and s) then
       draw(layer, nil)

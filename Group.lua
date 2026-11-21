@@ -287,7 +287,7 @@ table.insert(ns.Minimap.onActivate, function(outer)
     -- BubbleQuest's quest areas (review), so ours are drawn over them too, at its scale
     -- (Terrain:Projection follows its radius then); no hover there, the game's blips have theirs.
     local gameShowing = not ns.Zoom.own
-    local pn, pw, _, pmap = UnitPosition("player")
+    local pn, pw, pmap = ns.Terrain:Centre()  -- the view's centre (panned or on you)
     local s, turn = ns.Terrain:Projection()
     if not (readable(pn) and readable(pw) and s) then
       layer:Draw(nil, nil)
