@@ -213,6 +213,15 @@ buttons are put away.
   only (overlays): their painted base art has faded borders that overlapped (review: "this looks bad").
   Revealed by default (setting revealMap): every overlay from Data/Overlays.lua (tools/overlays.py, the
   game's WorldMapOverlay data), as Leatrix Maps reveals; unticked, only the explored ones.
+- **More of the world map** (2026-11-21, review: "do em all"): your corpse and, while dead, the
+  graveyards (C_DeathInfo); rares and treasures (C_VignetteInfo), also on our minimap, where the game's
+  minimap that shows them is hidden (live points, MapPoints.Live, read every second); your waypoint
+  also sets the game's own (C_Map.SetUserWaypoint + super-track: its on-screen arrow; setting
+  gameWaypoint); the world map key can open our window (override bindings on our frame, out of combat;
+  setting mapOnMapKey, off by default); the window fades while you move (windowMoveAlpha) and has the
+  world map's maximize button. Not done: multi-floor maps and interiors.
+- **Minimap opacity** (minimapAlpha): our frame and Blizzard's minimap fade, fully opaque on hover;
+  BubbleQuest's quest layer follows our frame's alpha (its side, 2026-11-21).
 - **Settings drawer** (2026-11-21): the footer's "Settings" opens BubbleMap's settings in the same drawer
   as the quest log (one drawer, two panels; the button of the open one closes it): the Options page's
   entries (Settings.lua ENTRIES, one list), as widgets, applied live, values read again on every open.

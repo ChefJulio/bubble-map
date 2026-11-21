@@ -36,6 +36,14 @@ local ENTRIES = {
     get = function() return ns.DB.heightPercent end,
     set = function(v) ns.DB.heightPercent = v; ns.Minimap:Refresh() end },
 
+  { kind = "slider", id = "BUBBLEMAP_MINIMAP_ALPHA", label = "Minimap opacity", default = 100, min = 20,
+    max = 100, step = 5,
+    tooltip = "How see-through the minimap is while the mouse isn't over it; hovering it makes it fully "
+      .. "opaque.",
+    format = function(v) return ("%d%%"):format(v) end,
+    get = function() return math.floor(ns.DB.minimapAlpha * 100 + 0.5) end,
+    set = function(v) ns.DB.minimapAlpha = v / 100 end },
+
   { kind = "dropdown", id = "BUBBLEMAP_GATHER_MODE", label = "Gather mode", default = "never",
     tooltip = "BubbleMap draws its own map, zooming in and out freely. Gather mode shows the game's own "
       .. "minimap instead, for its live herb, ore and tracking blips, which are only right at the game's "
@@ -57,6 +65,22 @@ local ENTRIES = {
     get = function() return ns.DB.mapStyle end,
     set = function(v) ns.DB.mapStyle = v; ns.Around:Apply() end },  -- the bar button's icon follows
 
+  { kind = "section", label = "Map window" },
+  { kind = "slider", id = "BUBBLEMAP_WINDOW_FADE", label = "Opacity while moving", default = 60, min = 20,
+    max = 100, step = 5,
+    tooltip = "The map window fades while you move, to see past it; hovering it makes it opaque. 100%: "
+      .. "no fading.",
+    format = function(v) return ("%d%%"):format(v) end,
+    get = function() return math.floor(ns.DB.windowMoveAlpha * 100 + 0.5) end,
+    set = function(v) ns.DB.windowMoveAlpha = v / 100 end },
+  { kind = "checkbox", id = "BUBBLEMAP_GAME_WAYPOINT", label = "Set the game's waypoint too", default = true,
+    tooltip = "Your waypoint also becomes the game's own map pin, with its on-screen arrow and distance.",
+    get = function() return ns.DB.gameWaypoint end, set = function(v) ns.DB.gameWaypoint = v end },
+  { kind = "checkbox", id = "BUBBLEMAP_MAP_KEY", label = "The map key opens this map", default = false,
+    tooltip = "The world map's key (M) opens BubbleMap's map window instead of the game's world map. "
+      .. "Applied out of combat.",
+    get = function() return ns.DB.mapOnMapKey end,
+    set = function(v) ns.DB.mapOnMapKey = v; ns.MapWindow:ApplyMapKey() end },
   { kind = "checkbox", id = "BUBBLEMAP_REVEAL", label = "Reveal the whole map", default = true,
     tooltip = "Map art (the minimap's Map style and the map window's): every zone fully painted, as if "
       .. "explored. Untick to see only the parts you've discovered, as on the world map.",

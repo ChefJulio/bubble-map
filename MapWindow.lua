@@ -502,6 +502,8 @@ local SHOW = {
   { "link", "Zone exits" },
   { "dungeon", "Dungeon entrances" },
   { "area", "Events and landmarks" },
+  { "corpse", "Corpse and graveyards" },
+  { "vignette", "Rares and treasures" },
   { "zoneNames", "Zone names" },
   { "waypoints", "Waypoints" },
 }
@@ -830,10 +832,32 @@ local function create()
     MapWindow.following = true
     redraw()
   end)
+  -- Maximize: nearly the whole screen, and back (the world map's own button).
+  local maximize = CreateFrame("Frame", nil, bar, "MaximizeMinimizeButtonFrameTemplate")
+  maximize:SetPoint("RIGHT", me, "LEFT", -2, 0)
+  maximize:SetSize(24, 24)
+  local restore  -- { left, top, width, height } while maximized
+  maximize:SetOnMaximizedCallback(function()
+    restore = { left = window:GetLeft(), top = window:GetTop(), width = window:GetWidth(),
+      height = window:GetHeight() }
+    local w, h = UIParent:GetWidth(), UIParent:GetHeight()
+    window:ClearAllPoints()
+    window:SetPoint("CENTER", UIParent, "CENTER")
+    window:SetSize(w * 0.94, h * 0.9)
+  end)
+  maximize:SetOnMinimizedCallback(function()
+    if restore then
+      window:ClearAllPoints()
+      window:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", restore.left, restore.top)
+      window:SetSize(restore.width, restore.height)
+      restore = nil
+    end
+  end)
+  maximize:SetMinimizedLook()
   local show = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
   show:SetText("Show")
   show:SetSize(show:GetFontString():GetStringWidth() + 20, 18)
-  show:SetPoint("RIGHT", me, "LEFT", -4, 0)
+  show:SetPoint("RIGHT", maximize, "LEFT", -2, 0)
   show:SetScript("OnClick", function(self) showMenu(self) end)
 
   -- Footer: coordinates, the style switch.
@@ -951,7 +975,15 @@ local function create()
 
   -- Every frame while shown: drag panning, following the player, everything's position. Cheap: tiles
   -- and art are only (re)textured when they come into view.
-  window:SetScript("OnUpdate", function()
+  -- Fade while you move (setting windowMoveAlpha), opaque while the mouse is over it; eased.
+  local alpha = 1
+  window:SetScript("OnUpdate", function(_, delta)
+    local target = (IsPlayerMoving() and not window:IsMouseOver()) and ns.DB.windowMoveAlpha or 1
+    if alpha ~= target then
+      local step = delta * 3
+      alpha = target > alpha and math.min(target, alpha + step) or math.max(target, alpha - step)
+      window:SetAlpha(alpha)
+    end
     if drag then
       local x, y = GetCursorPosition()
       local s = content:GetEffectiveScale()
@@ -1025,3 +1057,30 @@ BINDING_NAME_BUBBLEMAP_TOGGLE_MAP = "Open or close BubbleMap's map"
 function BubbleMap_ToggleMap()
   MapWindow:Toggle()
 end
+
+-- The map key ------------------------------------------------------------------------------------------
+-- Setting mapOnMapKey: the keys bound to the world map open ours instead, by override bindings on our own
+-- frame (the game's binding is untouched: off, they're cleared). Bindings can't change in combat: applied
+-- after it. Again when the bindings change (another key chosen for the world map).
+
+local bindings = CreateFrame("Frame")
+local appliedKeys  -- the keys last overridden, so a change of ours (UPDATE_BINDINGS again) isn't a loop
+
+---Apply the map key setting (out of combat; queued until then).
+function MapWindow:ApplyMapKey()
+  ns.AfterCombat("mapKey", function()
+    local keys = ns.DB.mapOnMapKey and { GetBindingKey("TOGGLEWORLDMAP") } or {}
+    local signature = table.concat(keys, " ")
+    if signature == appliedKeys then
+      return
+    end
+    appliedKeys = signature
+    ClearOverrideBindings(bindings)
+    for _, key in ipairs(keys) do
+      SetOverrideBinding(bindings, false, key, "BUBBLEMAP_TOGGLE_MAP")
+    end
+  end)
+end
+
+ns.On("PLAYER_LOGIN", function() MapWindow:ApplyMapKey() end)
+ns.On("UPDATE_BINDINGS", function() MapWindow:ApplyMapKey() end)

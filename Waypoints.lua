@@ -165,6 +165,38 @@ end)
 
 -- Placing ---------------------------------------------------------------------------------------------
 
+-- The game's own waypoint (setting gameWaypoint): its map pin, on-screen arrow and distance, as the world
+-- map's click sets it (Blizzard_WorldMap.lua, WaypointLocationDataProvider.lua), on the zone's map there.
+-- Cleared with ours, only when we set it.
+local setGame = false
+
+local function setGameWaypoint(map, north, west)
+  if not ns.DB.gameWaypoint then
+    return
+  end
+  local continent = ns.MapPoints.Continent(map, north, west)
+  if not continent then
+    return
+  end
+  local spot = CreateVector2D(north, west)
+  local _, onContinent = C_Map.GetMapPosFromWorldPos(map, spot, continent)
+  local zone = onContinent and C_Map.GetMapInfoAtPosition(continent, onContinent.x, onContinent.y)
+  local uiMap = zone and zone.mapID or continent
+  local _, pos = C_Map.GetMapPosFromWorldPos(map, spot, uiMap)
+  if pos and C_Map.CanSetUserWaypointOnMap(uiMap) then
+    C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(uiMap, pos.x, pos.y))
+    C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+    setGame = true
+  end
+end
+
+local function clearGameWaypoint()
+  if setGame then
+    setGame = false
+    C_Map.ClearUserWaypoint()
+  end
+end
+
 ---Drop your waypoint at world (north, west) on instance map `map`; `shared` tells your group.
 ---@param map number
 ---@param north number
@@ -174,6 +206,7 @@ function Waypoints:Set(map, north, west, shared)
   local wasShared = self.mine and self.mine.shared
   self.mine = { map = map, north = north, west = west, shared = shared }
   ns.DB.waypoint = self.mine
+  setGameWaypoint(map, north, west)
   if shared then
     if not IsInGroup() then
       say("waypoint set; not in a group, so it's yours only for now (it's shared when you join one).")
@@ -203,6 +236,7 @@ function Waypoints:Clear()
   local wasShared = self.mine and self.mine.shared
   self.mine = nil
   ns.DB.waypoint = nil
+  clearGameWaypoint()
   if wasShared then
     send("CLR")
   end

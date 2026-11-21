@@ -159,6 +159,90 @@ function Points.Refresh()
   invalidate()
 end
 
+-- Live points ---------------------------------------------------------------------------------------
+-- What changes as you play, read again every LIVE_SECONDS: your corpse (C_DeathInfo, as the world map's
+-- DeathMapDataProvider), the graveyards while you're dead (SelectableGraveyardDataProvider), and rares and
+-- treasures (vignettes, C_VignetteInfo, as the minimap and the world map show them). Positions on your
+-- zone's map, so only around you. A point keeps its table while it lasts (its texture stays set).
+
+local LIVE_SECONDS = 1
+local CORPSE_COORDS = { 0.56640625, 0.6328125, 0.001953125, 0.03515625 }  -- POIIcons (CorpsePinTemplate)
+local live = { at = -1, map = nil, list = {} }
+local liveByKey = {}
+
+local function readable(v)
+  return v ~= nil and not issecretvalue(v)
+end
+
+---The live points on instance map `map` (world north, west each); `north`, `west` a point on it.
+---@param map number
+---@param north number
+---@param west number
+---@return table
+function Points.Live(map, north, west)
+  if live.map == map and GetTime() - live.at < LIVE_SECONDS then
+    return live.list
+  end
+  local list, keys = {}, {}
+  local function put(key, uiMap, position, fields)
+    if not position then
+      return
+    end
+    local cont, world = C_Map.GetWorldPosFromMapPos(uiMap, position)
+    if cont ~= map or not world then
+      return
+    end
+    local point = liveByKey[key]
+    if not point or point.atlas ~= fields.atlas or point.index ~= fields.index or point.dim ~= fields.dim then
+      point = fields  -- new, or its icon changed: a new table (a new texture set up)
+      point.live = true
+      liveByKey[key] = point
+    else
+      point.name, point.note = fields.name, fields.note
+    end
+    point.north, point.west = world.x, world.y
+    keys[key] = true
+    list[#list + 1] = point
+  end
+
+  local here = C_Map.GetBestMapForUnit("player")
+  local continent = Points.Continent(map, north, west)
+  for _, uiMap in ipairs({ here or 0, continent or 0 }) do
+    local corpse = uiMap ~= 0 and C_DeathInfo.GetCorpseMapPosition(uiMap)
+    if corpse then
+      put("corpse", uiMap, corpse, { kind = "corpse", texture = "Interface/Minimap/POIIcons",
+        coords = CORPSE_COORDS, name = "Your corpse" })
+      break
+    end
+  end
+  -- apiguard: allow its result is checked with issecretvalue (readable) before use
+  local dead = UnitIsDeadOrGhost("player")
+  if here and readable(dead) and dead then
+    for _, grave in ipairs(C_DeathInfo.GetGraveyardsForMap(here) or {}) do
+      put("g" .. grave.graveyardID, here, grave.position, { kind = "corpse", index = grave.textureIndex,
+        name = grave.name, note = "Graveyard" })
+    end
+  end
+  if here then
+    for _, guid in ipairs(C_VignetteInfo.GetVignettes() or {}) do
+      if readable(guid) then
+        local info = C_VignetteInfo.GetVignetteInfo(guid)
+        if info and (info.onWorldMap or info.onMinimap) and readable(info.name) and readable(info.atlasName) then
+          put("v" .. guid, here, C_VignetteInfo.GetVignettePosition(guid, here), { kind = "vignette",
+            atlas = info.atlasName, name = info.name, dim = info.isDead })
+        end
+      end
+    end
+  end
+  for key in pairs(liveByKey) do
+    if not keys[key] then
+      liveByKey[key] = nil
+    end
+  end
+  live.map, live.at, live.list = map, GetTime(), list
+  return list
+end
+
 -- The layer ---------------------------------------------------------------------------------------
 
 local Layer = {}
@@ -193,6 +277,12 @@ function Layer:Icon(point)
       t:SetTexCoord(C_Minimap.GetPOITextureCoords(point.index))
       t:SetSize(POI_ICON, POI_ICON)
       set = true
+    elseif point.texture then
+      local c = point.coords or { 0, 1, 0, 1 }
+      t:SetTexture(point.texture)
+      t:SetTexCoord(c[1], c[2], c[3], c[4])
+      t:SetSize(ICON_MAX, ICON_MAX)
+      set = true
     end
     t.empty = not set
     t:SetDesaturated(point.dim or false)
@@ -209,31 +299,49 @@ end
 ---@param west number
 ---@param project? fun(north: number, west: number): number, number
 ---@param noHover boolean?
-function Layer:Draw(map, north, west, project, noHover)
+---@param liveOnly boolean? only the live points (the minimap: the rest is in the window)
+function Layer:Draw(map, north, west, project, noHover, liveOnly)
   wipe(self.shown)
-  local list = map and project and Points.For(map, north, west) or EMPTY
+  local list = map and project and not liveOnly and Points.For(map, north, west) or EMPTY
+  local liveList = map and project and Points.Live(map, north, west) or EMPTY
   project = project or function() return 0, 0 end
-  if list ~= self.list then
-    -- Gathered again (or another continent): the old points' textures go back to the pool.
-    for point, t in pairs(self.icons) do
+  -- Live points gone (looted, resurrected): their textures back to the pool.
+  local current = {}
+  for _, point in ipairs(liveList) do
+    current[point] = true
+  end
+  for point, t in pairs(self.icons) do
+    if point.live and not current[point] then
       t:Hide()
       self.free[#self.free + 1] = t
       self.icons[point] = nil
+    end
+  end
+  if list ~= self.list then
+    -- Gathered again (or another continent): the old points' textures go back to the pool.
+    for point, t in pairs(self.icons) do
+      if not point.live then
+        t:Hide()
+        self.free[#self.free + 1] = t
+        self.icons[point] = nil
+      end
     end
     self.list = list
   end
   local frame = self.frame
   local halfW, halfH = frame:GetWidth() / 2 + ICON_MAX, frame:GetHeight() / 2 + ICON_MAX
-  for _, point in ipairs(list) do
-    local x, y = project(point.north, point.west)
-    local t = self:Icon(point)
-    if not t.empty and math.abs(x) <= halfW and math.abs(y) <= halfH and ns.MapWindow.Shows(point.kind) then
-      t:ClearAllPoints()
-      t:SetPoint("CENTER", frame, "CENTER", x, y)
-      t:Show()
-      self.shown[#self.shown + 1] = { x = x, y = y, point = point }
-    else
-      t:Hide()
+  for _, points in ipairs({ list, liveList }) do
+    for _, point in ipairs(points) do
+      local x, y = project(point.north, point.west)
+      local t = self:Icon(point)
+      if not t.empty and math.abs(x) <= halfW and math.abs(y) <= halfH and ns.MapWindow.Shows(point.kind) then
+        t:ClearAllPoints()
+        t:SetPoint("CENTER", frame, "CENTER", x, y)
+        t:Show()
+        self.shown[#self.shown + 1] = { x = x, y = y, point = point }
+      else
+        t:Hide()
+      end
     end
   end
   self:Hover(noHover)
@@ -277,3 +385,35 @@ end
 function Layer:IsHovering()
   return self.hovering
 end
+
+-- The minimap's live points (our map hides the game's minimap, its rares and corpse with it): relative
+-- to the player, turned as the terrain is, over the quest layer. With the game's minimap showing, it
+-- draws them itself.
+table.insert(ns.Minimap.onActivate, function(outer)
+  local layer = Points.NewLayer(outer)
+  layer.frame:SetFrameStrata("LOW")
+  layer.frame:SetClipsChildren(true)
+  local elapsed = 0
+  layer.frame:SetScript("OnUpdate", function(_, delta)
+    elapsed = elapsed + delta
+    if elapsed < 0.05 then
+      return
+    end
+    elapsed = 0
+    local level = math.max(outer:GetFrameLevel(), Minimap:GetFrameLevel()) + 3
+    if layer.frame:GetFrameLevel() ~= level then
+      layer.frame:SetFrameLevel(level)
+    end
+    local pn, pw, _, pmap = UnitPosition("player")
+    local s, turn = ns.Terrain:Projection()
+    if not (ns.Zoom.own and readable(pn) and readable(pw) and s) then
+      layer:Draw(nil, 0, 0)
+      return
+    end
+    local cos, sin = math.cos(turn), math.sin(turn)
+    layer:Draw(pmap, pn, pw, function(north, west)
+      local x, y = (pw - west) * s, (north - pn) * s
+      return x * cos + y * sin, -x * sin + y * cos
+    end, false, true)
+  end)
+end)

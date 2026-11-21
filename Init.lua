@@ -78,7 +78,11 @@ local DEFAULTS = {
   worldTerrain = false, -- the real terrain on zone maps of the world map (WorldMap.lua)
   mapStyle = "terrain", -- what our map draws: "terrain" (the ground tiles) or "art" (the world map's art)
   groupNames = true,
-  groupLines = true,  -- dashed lines from you to party and raid members (Group.lua)  -- party and raid members' names beside their dots (Group.lua)
+  groupLines = true,
+  minimapAlpha = 1,   -- the minimap's opacity away from the mouse (fully opaque while hovered)
+  windowMoveAlpha = 0.6,  -- the map window's opacity while you move (1: no fade); opaque while hovered
+  gameWaypoint = true,    -- your waypoint also sets the game's own (its on-screen arrow)
+  mapOnMapKey = false,    -- the world map key (M) opens BubbleMap's map instead  -- dashed lines from you to party and raid members (Group.lua)  -- party and raid members' names beside their dots (Group.lua)
   revealMap = true,  -- map art: every zone's land pieces, explored or not (Data/Overlays.lua)
   windowStyle = "terrain",
   windowShow = {},    -- the map window's Show menu: [key] = false for what's switched off -- the same for the map window (MapWindow.lua), switched in its footer

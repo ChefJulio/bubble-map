@@ -238,6 +238,22 @@ function Minimap_:Activate()
   Minimap:ClearAllPoints()
   Minimap:SetPoint("CENTER", outer, "CENTER")
 
+  -- Opacity (setting minimapAlpha), fully opaque while the mouse is over the map; eased. On our frame
+  -- (its children: terrain, bar, arrow, dots, BubbleQuest's quest layer, which follows it) and on
+  -- Blizzard's minimap (gather mode, indoors).
+  local alpha = 1
+  local fader = CreateFrame("Frame", nil, outer)
+  fader:SetScript("OnUpdate", function(_, delta)
+    local over = outer:IsMouseOver() or (Minimap:IsShown() and Minimap:IsMouseOver())
+    local target = over and 1 or ns.DB.minimapAlpha
+    if alpha ~= target then
+      local step = delta * 4
+      alpha = target > alpha and math.min(target, alpha + step) or math.max(target, alpha - step)
+      outer:SetAlpha(alpha)
+      Minimap:SetAlpha(alpha)
+    end
+  end)
+
   -- With the quest addon: one column, its tracker under the map.
   local quest = ns.Quest
   if quest then
