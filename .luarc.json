@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "Lua 5.1",
+  "runtime.builtin": {
+    "basic": "disable",
+    "debug": "disable",
+    "io": "disable",
+    "math": "disable",
+    "os": "disable",
+    "package": "disable",
+    "string": "disable",
+    "table": "disable",
+    "utf8": "disable"
+  },
+  "workspace.library": [
+    ".tools/vscode-wow-api/Annotations/Core",
+    ".tools/wow-ui-source/Interface",
+    ".tools/generated"
+  ],
+  "workspace.ignoreDir": [
+    ".tools",
+    ".release",
+    "tools"
+  ],
+  "workspace.checkThirdParty": false,
+  "diagnostics.globals": [
+    "BubbleMapDB",
+    "GetMinimapShape",
+    "SLASH_BUBBLEMAP1",
+    "SLASH_BUBBLEMAP2",
+    "BubbleMap_ToggleMap",
+    "BINDING_HEADER_BUBBLEMAP",
+    "BINDING_NAME_BUBBLEMAP_TOGGLE_MAP",
+    "BubbleQuestAPI"
+  ],
+  "diagnostics.disable": [],
+  "diagnostics.severity": {
+    "undefined-global": "Error",
+    "undefined-field": "Error",
+    "deprecated": "Error",
+    "lowercase-global": "Error"
+  }
+}

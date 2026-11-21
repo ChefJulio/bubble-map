@@ -1,7 +1,7 @@
 local ADDON_NAME, ns = ...
 
 -- The square minimap and the column: Blizzard's own Minimap frame, restyled in place, with the quest
--- addon's tracker hanging under it when that addon is loaded. Design: docs/design/questmarker-map.md
+-- addon's tracker hanging under it when that addon is loaded. Design: docs/design.md
 -- ("The minimap").
 --
 -- Blizzard's frame stays in its Edit Mode container: Edit Mode scales it, we never move the container.

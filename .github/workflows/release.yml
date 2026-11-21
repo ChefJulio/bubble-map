@@ -1,0 +1,43 @@
+# Release: push a version tag (git tag -a v0.2.0 -m "..." && git push origin v0.2.0) and this builds
+# the zip and uploads it to CurseForge and GitHub Releases. Tags with "beta" or "alpha" in the name
+# (v0.2.0-beta) are uploaded as that release type.
+#
+# Needs the repository secret CF_API_KEY (a CurseForge API token) and ## X-Curse-Project-ID in the
+# TOC. GITHUB_TOKEN is provided by GitHub.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # The shipped file set must match between package.py and .pkgmeta. The runner's own Python 3.
+      - name: Check package contents
+        run: python3 tools/package.py --check
+
+      # Names like most addons in the CurseForge app (review): "BubbleMap-0.2.0.zip", as Bagnon-12.1.10.zip.
+      # The release type (beta, alpha) shows as CurseForge's badge, so it's cut from the name along
+      # with the tag's "v": tag v0.2.0-beta -> 0.2.0.
+      - name: Release name
+        id: name
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=${version%%-*}" >> "$GITHUB_OUTPUT"
+
+      - uses: BigWigsMods/packager@v2
+        with:
+          args: -n "{package-name}-${{ steps.name.outputs.version }}:{package-name}-${{ steps.name.outputs.version }}.zip"

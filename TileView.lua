@@ -11,7 +11,7 @@ local ADDON_NAME, ns = ...
 --
 -- REMAINING WORK: Terrain.lua (the minimap's padding and own map) has its own slot-grid version of this,
 -- written first and tested in game; it should move onto TileView (one tile drawer), its rotation added
--- here. Recorded in docs/design/terrain-map.md.
+-- here. Recorded in docs/terrain-map.md.
 
 local TILE_YARDS = 1600 / 3
 local GRID = 64

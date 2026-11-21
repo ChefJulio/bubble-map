@@ -1,7 +1,7 @@
 local ADDON_NAME, ns = ...
 
 -- Whose map, and zoom (build step 6, as decided with the user 2026-11-17). Design:
--- docs/design/questmarker-map.md ("Zoom").
+-- docs/design.md ("Zoom").
 --
 -- Blizzard's minimap blips (herbs, ore, tracking, party, the game's quest "?" and "!") are only right
 -- at Blizzard's own zoom levels and size: scaling its frame (behind a mask or a clipping parent) put

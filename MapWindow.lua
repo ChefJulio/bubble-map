@@ -3,7 +3,7 @@ local ADDON_NAME, ns = ...
 -- BubbleMap's own map window: every continent on one map (World.lua lays them out as the world map
 -- does), dragged to pan across zones and continents, wheeled to zoom far further in and out than
 -- Blizzard's world map (which can't: its zoom levels come from its map art and a pan stops at the zone;
--- changing either taints it). Design: docs/design/questmarker-map.md ("The world map").
+-- changing either taints it). Design: docs/design.md ("The world map").
 --
 -- A view is a centre on World's plane (X east, Y south, yards) and a scale (pixels per yard). Each
 -- continent in view is drawn in its own yards, centred where the plane's centre falls on it, by its own

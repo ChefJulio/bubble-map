@@ -2,7 +2,7 @@ local ADDON_NAME, ns = ...
 
 -- The launcher list (build step 4): every addon's minimap button and addon-compartment entry in one
 -- condensed, deduplicated list, opened from a button on the map's bar. Their minimap buttons are put
--- away. Design: docs/design/questmarker-map.md ("The launcher list").
+-- away. Design: docs/design.md ("The launcher list").
 --
 -- Sources, and what each row runs when clicked (exactly what the original ran):
 --   - LibDataBroker launchers (most addons' minimap buttons come from LibDBIcon, which draws an LDB

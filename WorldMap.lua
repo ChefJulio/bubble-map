@@ -2,7 +2,7 @@ local ADDON_NAME, ns = ...
 
 -- Terrain on Blizzard's world map (build step 7): a toggle that shows the real terrain, the minimap's
 -- own tiles (Data/Tiles.lua), instead of the painted art on zone maps. Design:
--- docs/design/terrain-map.md ("World map toggle").
+-- docs/terrain-map.md ("World map toggle").
 --
 -- Touching nothing of Blizzard's: our own frame on the map's canvas (WorldMapFrame:GetCanvas()), mouse
 -- off, an opaque fill and the tiles. Its frame level is read, not claimed: one above the explored-area

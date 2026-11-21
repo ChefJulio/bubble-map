@@ -1,0 +1,15 @@
+{
+  "luals": {
+    "version": "3.19.2"
+  },
+  "wow_api_annotations": {
+    "repo": "https://github.com/Ketho/vscode-wow-api.git",
+    "commit": "d0b5b51fac4c52c493371b9b18e66ce604ea4326"
+  },
+  "wow_ui_source": {
+    "repo": "https://github.com/Gethe/wow-ui-source.git",
+    "branch": "forever",
+    "commit": "3d8abb1da73acd38e412e24fb3f99454a6392346",
+    "build": "1.60.1.70959"
+  }
+}

@@ -2,7 +2,7 @@ local ADDON_NAME, ns = ...
 
 -- Everything around the minimap, ours: a bar along the map's top (zone name; tracking, calendar and
 -- mail buttons; the clock), coordinates and zoom buttons, each a setting. Design:
--- docs/design/questmarker-map.md ("Around the minimap").
+-- docs/design.md ("Around the minimap").
 --
 -- Blizzard's own versions are always hidden while BubbleMap styles the map: they're laid out for the
 -- round map and sat inside the square one (seen in game). Hidden by alpha 0 and the mouse off, never

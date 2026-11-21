@@ -1,0 +1,6 @@
+# Vendored third-party files: keep byte-identical to the verified release.
+Libs/** -text
+*.tga binary
+*.png binary
+*.ttf binary
+*.otf binary

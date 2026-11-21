@@ -2,7 +2,7 @@ local ADDON_NAME, ns = ...
 
 -- BubbleMap: a square minimap and everything around it, standalone, part of the Bubble suite. With
 -- the suite's quest addon loaded it also carries that addon's tracker under the map, in one column.
--- Design: docs/design/questmarker-map.md; suite rules: docs/design/bubble-suite.md (no Bubble addon
+-- Design: docs/design.md; suite rules: docs/design/bubble-suite.md (no Bubble addon
 -- requires another: siblings are optional and found through their public API).
 
 local QUEST_API_NEEDED = 1  -- the quest addon's API version these features are written against
