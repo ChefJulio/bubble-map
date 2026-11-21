@@ -31,7 +31,8 @@ Run `python tools/lint.py` after every Lua/XML change. It must print `lint: OK`.
 `Data/Tiles.lua` (terrain tiles) and `Data/Overlays.lua` (every zone's map overlays) are generated:
 `python tools/terrain.py` and `python tools/overlays.py`, from wago.tools at the build in
 `tools/toolchain.json`. Never edit them by hand; when the build pin moves, regenerate both
-(`--check` tells whether they match).
+(`--check` tells whether they match). `Data/Cities.lua` (Ironforge's and Undercity's own minimap
+images) comes from TerrainWorldMap's data at a pinned commit: `python tools/cities.py`.
 
 ## Releases
 
