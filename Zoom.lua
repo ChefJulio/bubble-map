@@ -171,8 +171,11 @@ local function apply()
   -- One ground in both: ours (Blizzard's was duller: the colour changed with the mode, seen in game).
   -- Indoors and off our data Terrain leaves Blizzard's ground on.
   ns.Terrain.force = true
+  -- Our arrow in every mode, over BubbleQuest's quest layer (review: with the game's minimap showing,
+  -- its own arrow sat under the quest areas; it can't be moved up or hidden, and the player is always
+  -- the minimap's centre, so ours covers it exactly).
   if arrow then
-    arrow:SetShown(own)
+    arrow:Show()
   end
   local quest = ns.Quest
   if quest and quest.SetMinimapZoom then
@@ -213,9 +216,6 @@ end
 -- Every frame: whose map, re-decided (cheap: a few API reads); the arrow turns with the player.
 local function update()
   Zoom:Update()
-  if not Zoom.own then
-    return
-  end
   -- apiguard: allow the argument is a constant string, never a secret value
   local rotating = GetCVarBool("rotateMinimap") and not C_Minimap.IsRotateMinimapIgnored()
   arrowTexture:SetRotation(rotating and 0 or (GetPlayerFacing() or 0))

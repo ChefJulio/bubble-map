@@ -283,14 +283,10 @@ table.insert(ns.Minimap.onActivate, function(outer)
     if layer.frame:GetFrameLevel() ~= level then
       layer.frame:SetFrameLevel(level)
     end
-    -- The game's minimap showing (gather mode at its levels, indoors): it draws the members' blips, so
-    -- only their names, beside its blips, at its scale (Terrain:Projection follows its radius then).
-    -- Review: names wanted "at any zoom level".
-    local namesOnly = not ns.Zoom.own
-    if namesOnly and not ns.DB.groupNames then
-      layer:Draw(nil, nil)
-      return
-    end
+    -- The game's minimap showing (gather mode at its levels, indoors): its own blips sit under
+    -- BubbleQuest's quest areas (review), so ours are drawn over them too, at its scale
+    -- (Terrain:Projection follows its radius then); no hover there, the game's blips have theirs.
+    local gameShowing = not ns.Zoom.own
     local pn, pw, _, pmap = UnitPosition("player")
     local s, turn = ns.Terrain:Projection()
     if not (readable(pn) and readable(pw) and s) then
@@ -302,6 +298,6 @@ table.insert(ns.Minimap.onActivate, function(outer)
       -- East right, north up; turned.
       local x, y = (pw - west) * s, (north - pn) * s
       return x * cos + y * sin, -x * sin + y * cos
-    end, nil, namesOnly)
+    end, gameShowing)
   end)
 end)
