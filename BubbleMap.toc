@@ -10,10 +10,12 @@
 Init.lua
 Data\Tiles.lua
 Data\Overlays.lua
+Data\Cities.lua
 Compat.lua
 Minimap.lua
 Terrain.lua
 Art.lua
+MapCities.lua
 Around.lua
 Launchers.lua
 Zoom.lua

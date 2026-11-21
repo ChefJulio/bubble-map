@@ -50,6 +50,7 @@ ns.Terrain = Terrain
 
 local clip, holder, fill
 local art  -- the "Map art" style's view (Art.lua)
+local cities  -- Ironforge and Undercity from their own minimap images, over either style (MapCities.lua)
 local slots = {}        -- [slotKey] = texture
 local slotTile = {}     -- [slotKey] = tile key it holds
 local slotCol, slotRow = {}, {}  -- [texture] = the grid column and row it shows
@@ -228,9 +229,12 @@ local function update(_, elapsed)
       hideTiles()
     end
     art:Hide()
+    cities:Hide()
     return
   end
   blizzardGround(false)
+  local _, _, feet = UnitPosition("player")
+  cities:Draw(px, py, mapID, s, turn, (feet and not issecretvalue(feet)) and feet or nil)
 
   -- The "Map art" style: the world map's painted art instead of our tiles (Art.lua).
   if ns.DB.mapStyle == "art" then
@@ -355,6 +359,10 @@ table.insert(ns.Minimap.onActivate, function(outer)
   holder = CreateFrame("Frame", nil, clip)
   holder:SetAllPoints()
   art = ns.Art.New(holder)
+  local cityFrame = CreateFrame("Frame", nil, holder)
+  cityFrame:SetAllPoints()
+  cityFrame:SetFrameLevel(holder:GetFrameLevel() + 5)  -- over the art view's three frames
+  cities = ns.MapCities.New(cityFrame)
   clip:SetScript("OnUpdate", update)
 
   -- The pan: the map frame takes the mouse (the wheel it had already: Zoom.lua). A press that doesn't

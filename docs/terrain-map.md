@@ -149,3 +149,14 @@ our own work, after the north-up padding.
 5. `LoadAddOn` of the data addon while in combat: hitch or refusal? If either, defer to
    `PLAYER_REGEN_ENABLED`.
 6. Cost of a capital's WMO groups on the canvas.
+
+## Cities (built 2026-11-21)
+
+Ironforge and Undercity are enclosed (inside a mountain, underground): the terrain tiles show only the
+ground above, and the game counts their streets as outdoors. Their streets come from the minimap images
+of the city's own model (WMO group tiles), placed in the world: `Data/Cities.lua`, made by
+`tools/cities.py` from TerrainWorldMap's Forever data (MIT, pinned commit, its tile toggle list applied),
+drawn by `MapCities.lua` exactly as TerrainWorldMap draws them (a quarter-turn texture coordinate
+transform, width and height swapped, rotated by minus the angle; plus the minimap's turn). Floors: only
+images up to 6 yd above your feet. Over either style, on the minimap and the window (zoomed in).
+The other capitals' buildings are in the terrain tiles already.

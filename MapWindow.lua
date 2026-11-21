@@ -269,6 +269,7 @@ local function slotFor(e)
     slot = { e = e, labels = {}, shown = false }
     slot.tiles = ns.TileView.New(layers.tiles)
     slot.art = ns.Art.New(layers.art)
+    slot.cities = ns.MapCities.New(layers.cities)
     local quest = ns.Quest
     if quest and quest.CreateQuestView then
       -- BubbleQuest's quest areas, givers' "!", turn-in "?", the guide line and town services (less
@@ -294,6 +295,7 @@ local function hideSlot(slot)
   slot.shown = false
   slot.tiles:Draw(0, 0, -1, ppy)  -- a map with no tiles: everything parked
   slot.art:Hide()
+  slot.cities:Hide()
   if slot.quests then
     slot.quests:Hide()
   end
@@ -346,6 +348,18 @@ local function redraw()
       else
         slot.art:Hide()
         slot.tiles:Draw(cn, cw, e.map, ppy)
+      end
+      -- Ironforge and Undercity from their own minimap images, zoomed in; floors up to yours when
+      -- you're on this map (MapCities.lua).
+      if ppy >= TILES_FROM_PPY then
+        local feet
+        if pn and pmap == e.map then
+          local _, _, z = UnitPosition("player")
+          feet = (z and not issecretvalue(z)) and z or nil
+        end
+        slot.cities:Draw(cn, cw, e.map, ppy, 0, feet)
+      else
+        slot.cities:Hide()
       end
       if slot.quests then
         slot.quests:Show()
@@ -928,6 +942,7 @@ local function create()
   end
   layers.tiles = content  -- TileView anchors to its frame's centre, under everything else
   layers.art = layer(0)
+  layers.cities = layer(4)  -- over the art view's frames (+ 1 .. + 3)
   local highlightFrame = layer(5)  -- over the art view's three frames (Art.New: + 1 .. + 3)
   highlight = highlightFrame:CreateTexture(nil, "ARTWORK")
   highlight:SetBlendMode("ADD")  -- as Blizzard's (MapHighlightDataProvider.xml)

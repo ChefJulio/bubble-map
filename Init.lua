@@ -15,19 +15,12 @@ if quest and quest.API < QUEST_API_NEEDED then
 end
 ns.Quest = quest  ---@type table?
 
--- Cities built inside a mountain or underground: the terrain tiles have only the ground above them (Dun
--- Morogh's snowy peak over Ironforge, review), and the game's minimap draws their interior, though the
--- game counts their streets as outdoors. UI map IDs (UiMap.csv): Ironforge, Undercity.
-local ENCLOSED_CITIES = { [1455] = true, [1458] = true }
-
----Whether the player is somewhere our terrain can't show: indoors, or in an enclosed city.
+---Whether the player is somewhere our map can't show: indoors (caves, buildings). The enclosed cities
+---(Ironforge, Undercity), whose streets the game counts as outdoors, our map draws from their own
+---minimap images (MapCities.lua; for a day they fell back to the game's minimap here).
 ---@return boolean
 function ns.Enclosed()
-  if IsIndoors() then
-    return true
-  end
-  local uiMap = C_Map.GetBestMapForUnit("player")
-  return uiMap ~= nil and ENCLOSED_CITIES[uiMap] == true
+  return IsIndoors() == true
 end
 
 -- The open sea's colour in the terrain tiles (sampled from coastal tiles' sea edges: about 5, 6, 7 of
