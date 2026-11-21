@@ -275,8 +275,9 @@ local function slotFor(e)
       -- flight masters: MapPoints draws those, with their discovered state), the same as on its minimap
       -- and the world map (one renderer: its UI/QuestView.lua). Its hover takes `content` as the frame
       -- under the cursor (content takes the mouse for drag and wheel).
+      -- clickAreas off: here a click on a quest area drops a waypoint; its "!" and "?" still take clicks.
       slot.quests = quest.CreateQuestView(content,
-        { guide = true, hover = true, services = { exclude = { flight = true } } })
+        { guide = true, hover = true, services = { exclude = { flight = true } }, clickAreas = false })
       slot.quests:GetFrame():SetFrameLevel(content:GetFrameLevel() + 6)
     end
     slot.points = ns.MapPoints.NewLayer(layers.points)
@@ -759,8 +760,15 @@ function drawPulse()
   pulseTexture:Show()
 end
 
--- A click on the map (no drag): waypoints (Waypoints.lua).
+-- A click on the map (no drag): BubbleQuest's quest marks first (a giver's "!" previews the quest, a "?"
+-- opens it in the drawer: its handle's Click, when it has it), else waypoints (Waypoints.lua).
 local function click(button)
+  for _, slot in pairs(slots) do
+    local quests = slot.shown and slot.quests
+    if quests and type(quests.Click) == "function" and quests:Click(button) then
+      return
+    end
+  end
   if not ns.Waypoints then
     return
   end
