@@ -305,11 +305,12 @@ table.insert(ns.Minimap.onActivate, function(outer)
   art = ns.Art.New(holder)
   clip:SetScript("OnUpdate", update)
 
-  -- The data is for one client build; FileDataIDs rarely change, so a different build only warns.
+  -- The data is for one client build. A new build of the same version (a hotfix patch) has kept every
+  -- tile so far (1.60.1.70959 to 71037: identical tables), so only a new version warns.
   local version, buildNumber = GetBuildInfo()
-  local running = ("%s.%s"):format(version, buildNumber)
-  if running ~= ns.Tiles.build then
-    print(("|cffffd100BubbleMap|r: terrain data is for client %s, this is %s; some tiles may be missing.")
-      :format(ns.Tiles.build, running))
+  local dataVersion = ns.Tiles.build:match("^(.*)%.%d+$")
+  if version ~= dataVersion then
+    print(("|cffffd100BubbleMap|r: terrain data is for client %s, this is %s.%s; some tiles may be missing.")
+      :format(ns.Tiles.build, version, buildNumber))
   end
 end)

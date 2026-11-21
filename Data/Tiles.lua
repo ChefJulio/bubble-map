@@ -6,7 +6,7 @@ local _, ns = ...
 -- build below. Map selection after TerrainWorldMap (MIT, Dramacydal/TerrainWorldMap).
 
 ns.Tiles = {
-  build = "1.60.1.70959",
+  build = "1.60.1.71037",
   maps = {
     [0] = {  -- Azeroth (736 tiles)
       [1526]=5313057, [1527]=5313059, [1528]=5313091, [1529]=5313095, [1530]=5313097, [1531]=5313127,

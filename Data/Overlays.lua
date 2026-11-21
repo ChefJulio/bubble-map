@@ -6,7 +6,7 @@ local _, ns = ...
 -- Source: wago.tools at the build below (UiMap, UiMapXMapArt, WorldMapOverlay, WorldMapOverlayTile).
 
 ns.Overlays = {
-  build = "1.60.1.70959",
+  build = "1.60.1.71037",
   maps = {
     [1411] = {  -- Durotar
       { w=256, h=256, x=427, y=78, cols=1, flags=4, files={8073637} },
